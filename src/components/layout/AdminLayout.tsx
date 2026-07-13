@@ -116,6 +116,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
+                  <Link to="/admin/blogs">
+                    <SidebarMenuButton
+                      isActive={currentPath === "/admin/blogs" || currentPath.startsWith("/admin/blogs/")}
+                      className={`hover:bg-sidebar-accent/40 transition-all duration-200 ${(currentPath === "/admin/blogs" || currentPath.startsWith("/admin/blogs/")) ? "bg-gradient-to-r from-primary/20 to-secondary/20 border-l-4 border-primary shadow-lg" : ""}`}
+                    >
+                      <FileText className={`h-5 w-5 transition-colors ${(currentPath === "/admin/blogs" || currentPath.startsWith("/admin/blogs/")) ? "text-primary" : "text-sidebar-foreground"}`} />
+                      <span className={`transition-colors ${(currentPath === "/admin/blogs" || currentPath.startsWith("/admin/blogs/")) ? "text-sidebar-primary-foreground font-semibold" : "text-sidebar-foreground"}`}>Blog Management</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
                   <Link to="/admin/logs">
                     <SidebarMenuButton
                       isActive={currentPath === "/admin/logs"}
@@ -165,6 +177,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   </Link>
                   <Link to="/admin/manga" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">
                     Manga
+                  </Link>
+                  <Link to="/admin/blogs" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">
+                    Blogs
                   </Link>
                   <Link to="/admin/contact" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">
                     Contact

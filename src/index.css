@@ -203,3 +203,134 @@ All colors MUST be HSL.
 .react-pdf__Page__annotations {
   display: none !important;
 }
+
+/* Tiptap custom styling & Floating layouts */
+.prose img.align-left {
+  float: left;
+  margin-right: 1.5rem;
+  margin-bottom: 1rem;
+  max-width: 48%;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+.prose img.align-right {
+  float: right;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  max-width: 48%;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+.prose img.align-center {
+  display: block;
+  margin: 2.5rem auto;
+  max-width: 100%;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+/* Row wrapper for side-by-side layout */
+.editor-row {
+  display: flex;
+  gap: 1.25rem;
+  margin: 2rem 0;
+  width: 100%;
+}
+
+.editor-row img {
+  flex: 1;
+  width: 50%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editor-row img:hover {
+  transform: scale(1.02);
+}
+
+/* Clear floats to avoid article breakage */
+.prose::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Custom TipTap Editor specific CSS styling for preview */
+.tiptap-editor {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--card));
+  min-height: 350px;
+}
+
+.tiptap-editor .ProseMirror {
+  outline: none;
+  min-height: 350px;
+  padding: 1.5rem;
+}
+
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   CRITICAL: Restore form UI styles broken by @tailwindcss/typography
+   The prose plugin resets inputs/checkboxes/selects - we fix that here
+   so only blog <article class="prose"> content is affected.
+   ============================================================ */
+
+/* Restore input/textarea borders and sizing outside prose */
+:not(.prose) input:not([type="checkbox"]):not([type="radio"]),
+:not(.prose) textarea,
+:not(.prose) select {
+  border-color: hsl(var(--border));
+}
+
+/* Restore checkbox appearance - typography plugin strips it */
+input[type="checkbox"] {
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  cursor: pointer;
+  accent-color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+/* Restore radio buttons */
+input[type="radio"] {
+  appearance: auto !important;
+  -webkit-appearance: radio !important;
+  cursor: pointer;
+  accent-color: hsl(var(--primary));
+}
+
+/* Restore native <select> element (used in AdminManga status filter) */
+select:not(.prose select) {
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+  color: inherit;
+}
+
+/* Restore label text color and cursor */
+label:not(.prose label) {
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Ensure genre checkbox list in admin forms looks correct */
+.genre-checkbox-list input[type="checkbox"] {
+  width: 1rem !important;
+  height: 1rem !important;
+  border-radius: 0.25rem;
+  accent-color: hsl(var(--primary));
+}

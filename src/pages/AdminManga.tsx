@@ -292,7 +292,7 @@ const AdminManga = () => {
                                 {/* Genres Selection */}
                                 <div className="space-y-2">
                                     <Label>Genres (Select multiple)</Label>
-                                    <div className="bg-black/20 border border-white/10 rounded-md p-3 max-h-48 overflow-y-auto">
+                                    <div className="bg-black/20 border border-white/10 rounded-md p-3 max-h-48 overflow-y-auto genre-checkbox-list">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {availableGenres.map((genre) => (
                                                 <label

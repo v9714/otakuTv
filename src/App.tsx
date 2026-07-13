@@ -42,6 +42,12 @@ const MangaReader = React.lazy(() => import("./pages/MangaReader"));
 const AdminManga = React.lazy(() => import("./pages/AdminManga"));
 const AdminChapters = React.lazy(() => import("./pages/AdminChapters"));
 
+// Blog lazy loads
+const BlogList = React.lazy(() => import("./pages/BlogList"));
+const BlogDetails = React.lazy(() => import("./pages/BlogDetails"));
+const AdminBlogs = React.lazy(() => import("./pages/AdminBlogs"));
+const AdminBlogEditor = React.lazy(() => import("./pages/AdminBlogEditor"));
+
 // Loading component for Suspense
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -139,6 +145,10 @@ const App = () => {
                       <Route path="/manga/:id" element={<MangaDetails />} />
                       <Route path="/read/:mangaId/chapter/:chapterId" element={<MangaReader />} />
 
+                      {/* Blog Routes */}
+                      <Route path="/blogs" element={<BlogList />} />
+                      <Route path="/blogs/:slug" element={<BlogDetails />} />
+
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminDashboard />} />
                       {isAnimeEnabled && <Route path="/admin/anime" element={<AdminAnime />} />}
@@ -149,6 +159,9 @@ const App = () => {
                       <Route path="/admin/logs" element={<AdminLogs />} />
                       <Route path="/admin/manga" element={<AdminManga />} />
                       <Route path="/admin/manga/:mangaId/chapters" element={<AdminChapters />} />
+                      <Route path="/admin/blogs" element={<AdminBlogs />} />
+                      <Route path="/admin/blogs/new" element={<AdminBlogEditor />} />
+                      <Route path="/admin/blogs/edit/:slug" element={<AdminBlogEditor />} />
 
                       {/* Catch-all Route */}
                       <Route path="*" element={<NotFound />} />

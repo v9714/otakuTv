@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Search, Menu, Home, Film, Video, BookOpen, Mail, User } from "lucide-react";
+import { Search, Menu, Home, Film, Video, BookOpen, Mail, User, FileText } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ export function Header() {
       { name: "Latest Episodes", path: ROUTES.episodes, icon: Video },
     ] : []),
     { name: "Manga", path: "/manga", icon: BookOpen },
+    { name: "Blogs", path: "/blogs", icon: FileText },
     { name: "Contact", path: ROUTES.contact, icon: Mail },
   ];
 
