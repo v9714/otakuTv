@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { SEO } from "@/components/SEO";
+import { SEO, BreadcrumbSchema } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,24 +16,60 @@ import {
   BookOpen,
   ArrowRight,
   MessageSquare,
-  Loader2
+  Loader2,
+  Bookmark,
+  Copy,
+  FileText,
+  Send
 } from "lucide-react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 
+// Modals & Auth
+import { useAuth } from "@/contexts/AuthContext";
+import { LoginPromptModal } from "@/components/auth/LoginPromptModal";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// Comments Section
+import { CommentsSection } from "@/components/anime/watch/CommentsSection";
+
 // Services
-import { getBlogBySlug, BlogPost, resolveImageUrl } from "@/services/blogService";
+import { 
+  getBlogBySlug, 
+  BlogPost, 
+  resolveImageUrl, 
+  toggleBlogLike, 
+  getBlogLikeStatus, 
+  toggleBlogBookmark, 
+  getBlogBookmarkStatus,
+  incrementBlogViews
+} from "@/services/blogService";
 import { getAnimeById } from "@/services/api";
 import { mangaService } from "@/services/mangaService";
 
 export default function BlogDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  
   const [blog, setBlog] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Interaction State
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [interactionLoading, setInteractionLoading] = useState(false);
+
+  // Auth Modals State
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authView, setAuthView] = useState<"signin" | "signup">("signin");
+  const [promptAction, setPromptAction] = useState("like this article");
+
+  // Share Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // References state
   const [linkedAnime, setLinkedAnime] = useState<any>(null);
@@ -41,6 +77,30 @@ export default function BlogDetails() {
 
   // Scroll Progress indicator
   const [scrollProgress, setScrollProgress] = useState(0);
+
+  // View count increment tracker
+  const viewIncremented = useRef(false);
+
+  // Reset view tracker when slug changes
+  useEffect(() => {
+    viewIncremented.current = false;
+  }, [slug]);
+
+  // Increment view count exactly once per session per blog post
+  useEffect(() => {
+    if (blog && !viewIncremented.current) {
+      viewIncremented.current = true;
+      const sessionKey = `viewed_blog_${blog.id}`;
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, "true");
+        // Optimistically increment local views count
+        setBlog(prev => prev ? { ...prev, views: prev.views + 1 } : null);
+        incrementBlogViews(blog.slug).catch(err => {
+          console.error("Failed to increment views:", err);
+        });
+      }
+    }
+  }, [blog]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,7 +114,7 @@ export default function BlogDetails() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Fetch blog data
+  // Fetch blog details
   useEffect(() => {
     const loadBlog = async () => {
       if (!slug) return;
@@ -63,8 +123,8 @@ export default function BlogDetails() {
         const data = await getBlogBySlug(slug);
         setBlog(data);
         
-        // Randomize initial likes count based on views
-        setLikesCount(Math.floor(data.views * 0.15) + 12);
+        // Use the actual likesCount from backend
+        setLikesCount(data.likesCount || 0);
 
         // Load linked Anime reference if exists
         if (data.animeId) {
@@ -97,21 +157,113 @@ export default function BlogDetails() {
     loadBlog();
   }, [slug, navigate]);
 
-  const handleLike = () => {
-    if (liked) {
-      setLiked(false);
-      setLikesCount(prev => prev - 1);
-      toast.success("Removed like");
-    } else {
-      setLiked(true);
-      setLikesCount(prev => prev + 1);
-      toast.success("Liked article!");
+  // Fetch like & bookmark status when currentUser or blog changes
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!blog) return;
+
+      // Fetch like status if logged in
+      if (currentUser) {
+        try {
+          const statusRes = await getBlogLikeStatus(blog.id);
+          if (statusRes.success) {
+            setLiked(statusRes.data.isLiked);
+            setLikesCount(statusRes.data.totalLikes);
+          }
+        } catch (e) {
+          console.error("Failed to get like status:", e);
+        }
+
+        try {
+          const bookmarkRes = await getBlogBookmarkStatus(blog.id);
+          if (bookmarkRes.success) {
+            setBookmarked(bookmarkRes.data.isBookmarked);
+          }
+        } catch (e) {
+          console.error("Failed to get bookmark status:", e);
+        }
+      }
+    };
+
+    fetchStatuses();
+  }, [blog, currentUser]);
+
+  const handleLike = async () => {
+    if (!currentUser) {
+      setPromptAction("like this article");
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (!blog || interactionLoading) return;
+
+    try {
+      setInteractionLoading(true);
+      const newStatus = !liked;
+      
+      // Optimistic update
+      setLiked(newStatus);
+      setLikesCount(prev => newStatus ? prev + 1 : Math.max(0, prev - 1));
+
+      const res = await toggleBlogLike(blog.id);
+      if (res.success) {
+        setLiked(res.data.isLiked);
+        setLikesCount(res.data.totalLikes);
+        toast.success(res.data.isLiked ? "Liked article!" : "Removed like");
+      } else {
+        // Revert
+        setLiked(!newStatus);
+        setLikesCount(prev => newStatus ? Math.max(0, prev - 1) : prev + 1);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to toggle like");
+    } finally {
+      setInteractionLoading(false);
     }
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success("Link copied to clipboard!");
+  const handleBookmark = async () => {
+    if (!currentUser) {
+      setPromptAction("bookmark this article");
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (!blog || interactionLoading) return;
+
+    try {
+      setInteractionLoading(true);
+      const newStatus = !bookmarked;
+
+      // Optimistic update
+      setBookmarked(newStatus);
+
+      const res = await toggleBlogBookmark(blog.id);
+      if (res.success) {
+        setBookmarked(res.data.isBookmarked);
+        toast.success(res.data.isBookmarked ? "Bookmarked article!" : "Removed bookmark");
+      } else {
+        setBookmarked(!newStatus);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to toggle bookmark");
+    } finally {
+      setInteractionLoading(false);
+    }
+  };
+
+  const handleSignIn = () => {
+    setShowLoginPrompt(false);
+    setAuthView("signin");
+    setShowAuthModal(true);
+  };
+
+  const handleSignUp = () => {
+    setShowLoginPrompt(false);
+    setAuthView("signup");
+    setShowAuthModal(true);
   };
 
   const getReadingTime = (content: string | undefined): string => {
@@ -119,6 +271,55 @@ export default function BlogDetails() {
     const words = content.replace(/<[^>]*>/g, "").split(/\s+/).length;
     const minutes = Math.max(Math.ceil(words / 200), 1);
     return `${minutes} min read`;
+  };
+
+  const getReadableContent = (htmlContent: string) => {
+    const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
+    return doc.body.textContent || "";
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Link copied to clipboard!");
+  };
+
+  const handleCopyFormatted = () => {
+    if (!blog) return;
+    const dateStr = new Date(blog.createdAt).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric"
+    });
+    
+    const formatted = `Title: ${blog.title}
+Summary: ${blog.summary}
+Author: ${blog.author?.displayName || "Admin"}
+Date: ${dateStr}
+URL: ${window.location.href}
+
+Content:
+${getReadableContent(blog.content || "")}`;
+
+    navigator.clipboard.writeText(formatted);
+    toast.success("Formatted blog copied to clipboard!");
+  };
+
+  const handleNativeShare = async () => {
+    if (!blog) return;
+    try {
+      await navigator.share({
+        title: blog.title,
+        text: blog.summary,
+        url: window.location.href
+      });
+      toast.success("Shared successfully!");
+    } catch (e: any) {
+      // AbortError is normal when user cancels the native share sheet
+      if (e.name !== 'AbortError') {
+        console.error("Native share failed", e);
+        toast.error("Native share is not supported on this browser");
+      }
+    }
   };
 
   if (loading) {
@@ -150,6 +351,19 @@ export default function BlogDetails() {
   const absoluteUrl = window.location.href;
   const publishedDate = new Date(blog.createdAt).toISOString();
 
+  // Dynamically generate SEO-friendly keywords from title and genres
+  const blogKeywords = blog.genres && blog.genres.length > 0
+    ? blog.genres.map(g => g.name.toLowerCase()).join(", ")
+    : "anime, manga, review, news, guide";
+  const titleKeywords = blog.title
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .split(" ")
+    .filter(w => w.length > 3)
+    .slice(0, 8)
+    .join(", ");
+  const seoKeywords = `${titleKeywords}, ${blogKeywords}, otakutv, watch anime online, free anime streaming`;
+
   return (
     <Layout>
       {/* Article Schema SEO JSON-LD */}
@@ -158,6 +372,14 @@ export default function BlogDetails() {
         description={blog.summary}
         image={resolveImageUrl(blog.coverImage)}
         url={`/blogs/${blog.slug}`}
+        keywords={seoKeywords}
+      />
+      <BreadcrumbSchema 
+        items={[
+          { name: "Home", url: "https://otakutv.in" },
+          { name: "Blogs", url: "https://otakutv.in/blogs" },
+          { name: blog.title, url: absoluteUrl }
+        ]}
       />
       <Helmet>
         <script type="application/ld+json">
@@ -170,6 +392,7 @@ export default function BlogDetails() {
             "url": absoluteUrl,
             "datePublished": publishedDate,
             "dateModified": publishedDate,
+            "keywords": seoKeywords,
             "author": {
               "@type": "Person",
               "name": blog.author?.displayName || "Admin"
@@ -196,8 +419,8 @@ export default function BlogDetails() {
         style={{ width: `${scrollProgress}%` }}
       />
 
-      <div className="min-h-screen bg-background pb-20 pt-6">
-        <div className="container mx-auto px-4 max-w-5xl">
+      <div className="min-h-screen bg-background pb-24 pt-6">
+        <div className="container mx-auto px-4 max-w-[1400px]">
           
           {/* Back button */}
           <Button
@@ -211,17 +434,19 @@ export default function BlogDetails() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* Left sidebar widgets: Likes, Shares */}
-            <div className="lg:col-span-1 flex lg:flex-col lg:items-center justify-start gap-4 lg:sticky lg:top-24 h-fit">
+            {/* Left sidebar widgets: Likes, Bookmarks, Shares */}
+            <div className="hidden lg:flex lg:col-span-1 lg:flex-col lg:items-center justify-start gap-4 lg:sticky lg:top-24 h-fit">
               <Button
                 variant={liked ? "default" : "outline"}
                 size="icon"
                 onClick={handleLike}
+                disabled={interactionLoading}
                 className={`rounded-full shadow-md transition-all duration-300 ${
                   liked
                     ? "bg-red-500 hover:bg-red-600 text-white border-red-500 scale-110"
                     : "hover:text-red-500 hover:border-red-500"
                 }`}
+                title="Like Article"
               >
                 <Heart className={`h-5 w-5 ${liked ? "fill-current" : ""}`} />
               </Button>
@@ -230,11 +455,26 @@ export default function BlogDetails() {
               </div>
 
               <Button
+                variant={bookmarked ? "default" : "outline"}
+                size="icon"
+                onClick={handleBookmark}
+                disabled={interactionLoading}
+                className={`rounded-full shadow-md transition-all duration-300 ${
+                  bookmarked
+                    ? "bg-primary hover:bg-primary/90 text-primary-foreground border-primary scale-110"
+                    : "hover:text-primary hover:border-primary"
+                }`}
+                title="Bookmark Article"
+              >
+                <Bookmark className={`h-5 w-5 ${bookmarked ? "fill-current" : ""}`} />
+              </Button>
+
+              <Button
                 variant="outline"
                 size="icon"
-                onClick={handleShare}
+                onClick={() => setShowShareModal(true)}
                 className="rounded-full shadow-md hover:text-primary hover:border-primary transition-colors"
-                title="Copy Share Link"
+                title="Share Article"
               >
                 <Share2 className="h-5 w-5" />
               </Button>
@@ -317,15 +557,9 @@ export default function BlogDetails() {
                 dangerouslySetInnerHTML={{ __html: blog.content || "" }}
               />
 
-              {/* Comments Section placeholder */}
+              {/* Comments Section */}
               <div id="comments-section" className="border-t pt-8 space-y-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  Discussion (0)
-                </h3>
-                <div className="bg-card p-6 rounded-xl border text-center text-muted-foreground text-sm">
-                  Comments are currently locked for archiving. Join our Discord server to discuss!
-                </div>
+                <CommentsSection contentType="blog" contentId={String(blog.id)} />
               </div>
 
             </div>
@@ -394,9 +628,113 @@ export default function BlogDetails() {
             </div>
 
           </div>
-
         </div>
       </div>
+
+      {/* Mobile Sticky Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-border/60 bg-background/80 backdrop-blur-lg shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+        <div className="flex justify-around items-center py-2.5 px-4 max-w-md mx-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLike}
+            disabled={interactionLoading}
+            className={`flex flex-col gap-0.5 items-center h-auto py-1 hover:bg-transparent ${
+              liked ? "text-red-500" : "text-muted-foreground"
+            }`}
+          >
+            <Heart className={`h-5 w-5 ${liked ? "fill-current" : ""}`} />
+            <span className="text-[10px] font-semibold">{likesCount}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBookmark}
+            disabled={interactionLoading}
+            className={`flex flex-col gap-0.5 items-center h-auto py-1 hover:bg-transparent ${
+              bookmarked ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <Bookmark className={`h-5 w-5 ${bookmarked ? "fill-current" : ""}`} />
+            <span className="text-[10px] font-semibold">{bookmarked ? "Saved" : "Save"}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const commentsEl = document.getElementById("comments-section");
+              if (commentsEl) {
+                commentsEl.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+            className="flex flex-col gap-0.5 items-center h-auto py-1 text-muted-foreground hover:bg-transparent"
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Comment</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowShareModal(true)}
+            className="flex flex-col gap-0.5 items-center h-auto py-1 text-muted-foreground hover:bg-transparent"
+          >
+            <Share2 className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Share</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Share Modal */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="sm:max-w-[420px] rounded-xl border border-border/80 bg-card/95 backdrop-blur-md shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
+              <Share2 className="h-5 w-5 text-primary" />
+              Share Article
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Choose how you want to share this article with your friends.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 mt-4">
+            {typeof navigator.share !== "undefined" && (
+              <Button onClick={handleNativeShare} className="w-full flex items-center justify-start gap-3 bg-primary hover:bg-primary/95 text-white">
+                <Send className="h-4 w-4" />
+                <span>Native Share</span>
+              </Button>
+            )}
+
+            <Button onClick={handleCopyLink} variant="outline" className="w-full flex items-center justify-start gap-3 hover:bg-primary/5 hover:text-primary transition-all">
+              <Copy className="h-4 w-4" />
+              <span>Copy Link Only</span>
+            </Button>
+
+            <Button onClick={handleCopyFormatted} variant="outline" className="w-full flex items-center justify-start gap-3 hover:bg-primary/5 hover:text-primary transition-all">
+              <FileText className="h-4 w-4" />
+              <span>Copy Formatted Article Text</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Modals */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        onSignIn={handleSignIn}
+        onSignUp={handleSignUp}
+        action={promptAction}
+      />
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultView={authView}
+      />
     </Layout>
   );
 }

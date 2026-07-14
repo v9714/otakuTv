@@ -2,8 +2,12 @@ const fs = require('fs');
 const axios = require('axios');
 
 const BASE_URL = 'https://otakutv.in';
-const ANIME_API = 'https://otakutv.in/api/content/api/anime';
-const MANGA_API = 'https://otakutv.in/api/manga/api/manga';
+const CONTENT_BASE = process.env.CONTENT_API_URL || 'https://otakutv.in/api/content';
+const MANGA_BASE = process.env.MANGA_API_URL || 'https://otakutv.in/api/manga';
+
+const ANIME_API = `${CONTENT_BASE}/api/anime`;
+const MANGA_API = `${MANGA_BASE}/api/manga`;
+const BLOG_API = `${CONTENT_BASE}/api/blogs`;
 const REQUEST_TIMEOUT = 15000;
 const PAGE_SIZE = 100;
 
@@ -57,6 +61,19 @@ async function fetchMangaPage(page) {
     };
 }
 
+async function fetchBlogPage(page) {
+    const response = await axios.get(BLOG_API, {
+        params: { page, limit: PAGE_SIZE },
+        timeout: REQUEST_TIMEOUT,
+    });
+
+    const payload = response.data?.data || {};
+    return {
+        items: payload.blogs || [],
+        totalPages: payload.pagination?.totalPages || 1,
+    };
+}
+
 async function collectPaginatedEntries(fetchPage, mapItem) {
     const entries = [];
     const seen = new Set();
@@ -96,6 +113,7 @@ async function generateSitemap() {
         buildUrl('/manga', { changefreq: 'daily', priority: '0.9' }),
         buildUrl('/manga/browse', { changefreq: 'daily', priority: '0.8' }),
         buildUrl('/episodes', { changefreq: 'daily', priority: '0.8' }),
+        buildUrl('/blogs', { changefreq: 'daily', priority: '0.8' }),
         buildUrl('/contact', { changefreq: 'monthly', priority: '0.5' }),
     ];
 
@@ -119,7 +137,17 @@ async function generateSitemap() {
         });
     });
 
-    const urls = [...staticRoutes, ...animeRoutes, ...mangaRoutes];
+    const blogRoutes = await collectPaginatedEntries(fetchBlogPage, (blog) => {
+        if (!blog?.slug) return null;
+
+        return buildUrl(`/blogs/${blog.slug}`, {
+            changefreq: 'weekly',
+            priority: '0.8',
+            lastmod: normalizeDate(blog.updatedAt || blog.createdAt),
+        });
+    });
+
+    const urls = [...staticRoutes, ...animeRoutes, ...mangaRoutes, ...blogRoutes];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;

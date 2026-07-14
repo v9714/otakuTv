@@ -161,7 +161,7 @@ const App = () => {
                       <Route path="/admin/manga/:mangaId/chapters" element={<AdminChapters />} />
                       <Route path="/admin/blogs" element={<AdminBlogs />} />
                       <Route path="/admin/blogs/new" element={<AdminBlogEditor />} />
-                      <Route path="/admin/blogs/edit/:slug" element={<AdminBlogEditor />} />
+                      <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor />} />
 
                       {/* Catch-all Route */}
                       <Route path="*" element={<NotFound />} />

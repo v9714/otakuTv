@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { SEO } from "@/components/SEO";
+import { SEO, BreadcrumbSchema } from "@/components/SEO";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,27 +77,34 @@ export default function BlogList() {
   return (
     <Layout>
       <SEO
-        title="Anime Blogs & Reviews | OtakuTV"
-        description="Read the latest anime & manga reviews, editorials, guides, and news. Hand-picked articles curated by OtakuTV editors."
+        title="Anime Blogs, News & Reviews | OtakuTV"
+        description="Read the latest anime & manga reviews, character analysis, season guides, and editorials. High-quality articles curated for otaku community by OtakuTV editors."
+        keywords="anime blogs, manga reviews, anime recommendations, otaku articles, anime news, watch anime online, OtakuTV editorials, anime analysis, my anime list reviews"
         url="/blogs"
+      />
+      <BreadcrumbSchema 
+        items={[
+          { name: "Home", url: "https://otakutv.in" },
+          { name: "Blogs", url: "https://otakutv.in/blogs" }
+        ]}
       />
 
       <div className="min-h-screen bg-background py-8">
-        <div className="container mx-auto px-4 max-w-6xl space-y-8">
-          
-          {/* Header Hero Section */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-accent/5 to-transparent border p-8 md:p-12">
-            <div className="absolute inset-0 bg-grid-white/5" />
-            <div className="relative max-w-2xl space-y-4">
-              <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
-                OtakuTV Editorial
-              </Badge>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
-                Anime News, Reviews & Articles
-              </h1>
-              <p className="text-muted-foreground text-base md:text-lg">
-                Explore deep dives, rankings, and structural reviews of your favorite anime series and manga chapters.
-              </p>
+        <div className="container mx-auto px-4 max-w-[1400px] space-y-8">
+            
+            {/* Header Hero Section */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-accent/5 to-transparent border p-8 md:p-12">
+              <div className="absolute inset-0 bg-grid-white/5" />
+              <div className="relative max-w-2xl space-y-4">
+                <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
+                  OtakuTV Editorial
+                </Badge>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+                  Anime News, Reviews & Articles
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Explore deep dives, rankings, and structural reviews of your favorite anime series and manga chapters.
+                </p>
               
               {/* Search input */}
               <div className="relative max-w-md pt-2">
@@ -146,8 +153,8 @@ export default function BlogList() {
 
           {/* Blogs Grid */}
           {loading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <Card key={index} className="overflow-hidden border border-border bg-card">
                   <div className="aspect-video bg-muted animate-pulse" />
                   <CardContent className="p-5 space-y-3">
@@ -171,7 +178,7 @@ export default function BlogList() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-fade-in">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-fade-in">
               {blogs.map((blog) => (
                 <Card
                   key={blog.id}
@@ -238,30 +245,74 @@ export default function BlogList() {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 pt-6">
+          {totalPages >= 1 && (
+            <div className="flex items-center justify-center space-x-1 sm:space-x-2 pt-8">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => {
+                  setCurrentPage(prev => Math.max(prev - 1, 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
                 disabled={currentPage === 1}
+                className="px-2 sm:px-3 text-xs sm:text-sm h-8 sm:h-10"
               >
                 Previous
               </Button>
-              <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </div>
+              {(() => {
+                const pages: (number | string)[] = [];
+                const range = 1;
+                for (let i = 1; i <= totalPages; i++) {
+                  if (
+                    i === 1 ||
+                    i === totalPages ||
+                    (i >= currentPage - range && i <= currentPage + range)
+                  ) {
+                    pages.push(i);
+                  } else if (pages[pages.length - 1] !== "...") {
+                    pages.push("...");
+                  }
+                }
+                return pages.map((p, idx) => {
+                  if (p === "...") {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="text-muted-foreground px-1 sm:px-2 text-xs sm:text-sm">
+                        ...
+                      </span>
+                    );
+                  }
+                  return (
+                    <Button
+                      key={`page-${p}`}
+                      variant={currentPage === p ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setCurrentPage(p as number);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 p-0 text-xs sm:text-sm font-semibold rounded-md transition-all ${
+                        currentPage === p ? "shadow-md shadow-primary/20 scale-105" : ""
+                      }`}
+                    >
+                      {p}
+                    </Button>
+                  );
+                });
+              })()}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() => {
+                  setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
                 disabled={currentPage === totalPages}
+                className="px-2 sm:px-3 text-xs sm:text-sm h-8 sm:h-10"
               >
                 Next
               </Button>
             </div>
           )}
-
         </div>
       </div>
     </Layout>

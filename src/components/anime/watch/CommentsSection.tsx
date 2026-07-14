@@ -11,12 +11,16 @@ import { getToken } from "@/services/backendApi";
 const COMMENTS_PER_PAGE = 20;
 
 interface CommentsSectionProps {
-  episodeId: string;
+  episodeId?: string;
+  contentType?: 'episode' | 'blog';
+  contentId?: string;
 }
 
-export function CommentsSection({ episodeId }: CommentsSectionProps) {
+export function CommentsSection({ episodeId, contentType = 'episode', contentId }: CommentsSectionProps) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+
+  const actualContentId = contentId || episodeId || "";
 
   const [comments, setComments] = useState<commentsApi.Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +52,10 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
         setLoading(true);
       }
 
-      console.log('🔍 Fetching comments - Page:', page, 'Episode:', episodeId);
-      const response = await commentsApi.getCommentsByEpisode(episodeId, page, COMMENTS_PER_PAGE);
+      console.log('🔍 Fetching comments - Page:', page, 'ContentType:', contentType, 'ID:', actualContentId);
+      const response = contentType === 'blog'
+        ? await commentsApi.getCommentsByBlog(actualContentId, page, COMMENTS_PER_PAGE)
+        : await commentsApi.getCommentsByEpisode(actualContentId, page, COMMENTS_PER_PAGE);
       console.log('📦 API Response:', response);
 
       if (response.success) {
@@ -67,7 +73,8 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
           console.log('📊 Pagination data:', response.data.pagination);
           const haMoreValue = response.data.pagination.hasMore ?? (fetchedComments.length === COMMENTS_PER_PAGE);
           setHasMore(haMoreValue);
-          setTotalComments(response.data.pagination.totalComments || 0);
+          const totalVal = response.data.pagination.totalCount ?? response.data.pagination.totalComments ?? 0;
+          setTotalComments(totalVal);
           console.log('🔄 HasMore set to:', haMoreValue);
         } else {
           // Fallback if pagination info not provided
@@ -89,7 +96,7 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [episodeId, toast]);
+  }, [contentType, actualContentId, toast]);
 
   const loadMoreComments = useCallback(() => {
     if (loadingMore || !hasMore) return;
@@ -102,15 +109,15 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
 
   // Load initial comments
   useEffect(() => {
-    if (episodeId) {
-      // Reset state when episode changes
+    if (actualContentId) {
+      // Reset state when content changes
       setComments([]);
       setCurrentPage(1);
       setHasMore(true);
       setTotalComments(0);
       loadComments(1, true);
     }
-  }, [episodeId, loadComments]);
+  }, [actualContentId, loadComments]);
 
   // Setup intersection observer for infinite scroll
   useEffect(() => {
@@ -150,8 +157,16 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
     try {
       const response = await commentsApi.getReplies(commentId);
       if (response.success) {
-        setReplies(prev => new Map(prev).set(commentId, response.data.replies));
-        setExpandedReplies(prev => new Set(prev).add(commentId));
+        setReplies(prev => {
+          const newMap = new Map(prev);
+          newMap.set(String(commentId), response.data.replies);
+          return newMap;
+        });
+        setExpandedReplies(prev => {
+          const newSet = new Set(prev);
+          newSet.add(String(commentId));
+          return newSet;
+        });
       }
     } catch (error: any) {
       console.error('Failed to load replies:', error);
@@ -187,9 +202,11 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
       }
 
       const response = await commentsApi.createComment({
-        episodeId,
         content: newComment.trim(),
-        parentId: null
+        parentId: null,
+        contentType,
+        contentId: actualContentId,
+        episodeId: contentType === 'episode' ? actualContentId : undefined
       });
 
       if (response.success) {
@@ -246,9 +263,11 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
       }
 
       const response = await commentsApi.createComment({
-        episodeId,
         content: replyContent.trim(),
-        parentId
+        parentId,
+        contentType,
+        contentId: actualContentId,
+        episodeId: contentType === 'episode' ? actualContentId : undefined
       });
 
       if (response.success) {
@@ -296,13 +315,13 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
       if (response.success) {
         // Update in local state
         setComments(prev =>
-          prev.map(c => c.id === commentId ? { ...c, content: editContent.trim(), updatedAt: new Date().toISOString() } : c)
+          prev.map(c => String(c.id) === String(commentId) ? { ...c, content: editContent.trim(), updatedAt: new Date().toISOString() } : c)
         );
         // Also update in replies if it exists there
         setReplies(prev => {
           const newMap = new Map(prev);
           for (const [parentId, repliesList] of newMap.entries()) {
-            newMap.set(parentId, repliesList.map(r => r.id === commentId ? { ...r, content: editContent.trim(), updatedAt: new Date().toISOString() } : r));
+            newMap.set(parentId, repliesList.map(r => String(r.id) === String(commentId) ? { ...r, content: editContent.trim(), updatedAt: new Date().toISOString() } : r));
           }
           return newMap;
         });
@@ -346,13 +365,13 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
       const response = await commentsApi.deleteComment(commentId);
 
       if (response.success) {
-        setComments(prev => prev.filter(c => c.id !== commentId));
+        setComments(prev => prev.filter(c => String(c.id) !== String(commentId)));
         setTotalComments(prev => Math.max(0, prev - 1));
         // Also remove from replies
         setReplies(prev => {
           const newMap = new Map(prev);
           for (const [parentId, repliesList] of newMap.entries()) {
-            newMap.set(parentId, repliesList.filter(r => r.id !== commentId));
+            newMap.set(parentId, repliesList.filter(r => String(r.id) !== String(commentId)));
           }
           return newMap;
         });
@@ -388,26 +407,28 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
 
   // Render a single comment
   const renderComment = (comment: commentsApi.Comment, isReply = false) => {
-    const isEditing = editingCommentId === comment.id;
-    const isOwnComment = currentUser?.id === comment.user.id; // Corrected user ID check
-    const commentReplies = replies.get(comment.id) || [];
-    const isExpanded = expandedReplies.has(comment.id);
+    const commentIdStr = String(comment.id);
+    const isEditing = editingCommentId === commentIdStr;
+    const isOwnComment = currentUser?.id && comment.user?.id && String(currentUser.id) === String(comment.user.id);
+    const commentReplies = replies.get(commentIdStr) || [];
+    const isExpanded = expandedReplies.has(commentIdStr);
+    const replyCount = comment.replyCount ?? comment._count?.replies ?? 0;
 
     return (
-      <div key={comment.id} className={`group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors ${isReply ? 'ml-12 border-l-2 border-border/50 pl-4' : ''}`}>
+      <div key={commentIdStr} className={`group flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors ${isReply ? 'ml-12 border-l-2 border-border/50 pl-4' : ''}`}>
         {/* Avatar */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-lg shadow-md flex-shrink-0 overflow-hidden">
-          {comment.user.avatarUrl ? (
-            <img src={comment.user.avatarUrl} alt={comment.user.displayName} className="w-full h-full object-cover" />
+          {comment.user?.avatarUrl ? (
+            <img src={comment.user.avatarUrl} alt={comment.user.displayName || 'User'} className="w-full h-full object-cover" />
           ) : (
-            comment.user.displayName?.charAt(0).toUpperCase() || 'U'
+            comment.user?.displayName?.charAt(0).toUpperCase() || 'U'
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-medium text-sm">{comment.user.displayName || 'User'}</h4>
+            <h4 className="font-medium text-sm">{comment.user?.displayName || 'User'}</h4>
             <span className="text-xs text-muted-foreground">{formatTimeAgo(comment.createdAt)}</span>
             {comment.createdAt !== comment.updatedAt && (
               <span className="text-xs text-muted-foreground italic">(edited)</span>
@@ -425,7 +446,7 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
                 autoFocus
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => handleEditComment(comment.id)} disabled={submitting}>
+                <Button size="sm" onClick={() => handleEditComment(commentIdStr)} disabled={submitting}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setEditingCommentId(null); setEditContent(''); }}>
@@ -445,8 +466,8 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                  onClick={() => setReplyingTo(replyingTo === commentIdStr ? null : commentIdStr)}
                 >
                   <ReplyIcon className="h-3 w-3" />
                   Reply
@@ -454,15 +475,15 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
               )}
 
               {/* Show Replies Button */}
-              {!isReply && comment.replyCount && comment.replyCount > 0 && (
+              {!isReply && replyCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={() => isExpanded ? setExpandedReplies(prev => { const newSet = new Set(prev); newSet.delete(comment.id); return newSet; }) : loadReplies(comment.id)}
+                  onClick={() => isExpanded ? setExpandedReplies(prev => { const newSet = new Set(prev); newSet.delete(commentIdStr); return newSet; }) : loadReplies(commentIdStr)}
                 >
                   <MessageSquare className="h-3 w-3" />
-                  {isExpanded ? 'Hide' : `View ${comment.replyCount}`} {comment.replyCount === 1 ? 'reply' : 'replies'}
+                  {isExpanded ? 'Hide' : `View ${replyCount}`} {replyCount === 1 ? 'reply' : 'replies'}
                 </Button>
               )}
 
@@ -472,8 +493,8 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => { setEditingCommentId(comment.id); setEditContent(comment.content); }}
+                    className="h-6 px-2 text-xs gap-1 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-500/20"
+                    onClick={() => { setEditingCommentId(commentIdStr); setEditContent(comment.content); }}
                   >
                     <Edit2 className="h-3 w-3" />
                     Edit
@@ -481,8 +502,8 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-xs gap-1 text-default hover:text-default"
-                    onClick={() => handleDeleteComment(comment.id)}
+                    className="h-6 px-2 text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-500/10 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-500/20"
+                    onClick={() => handleDeleteComment(commentIdStr)}
                   >
                     <Trash2 className="h-3 w-3" />
                     Delete
@@ -493,18 +514,18 @@ export function CommentsSection({ episodeId }: CommentsSectionProps) {
           )}
 
           {/* Reply Input */}
-          {replyingTo === comment.id && (
-            <div className="flex gap-2 mt-3 flex-col sm:flex-row">
+          {replyingTo === commentIdStr && (
+            <div className="flex gap-2 mt-3 flex-col sm:flex-row p-3 rounded-lg bg-white/10 dark:bg-white/5 border border-primary/30 shadow-md">
               <Input
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
-                className="flex-1"
-                onKeyPress={(e) => e.key === 'Enter' && handleReplySubmit(comment.id)}
+                className="flex-1 bg-background text-foreground"
+                onKeyPress={(e) => e.key === 'Enter' && handleReplySubmit(commentIdStr)}
                 autoFocus
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => handleReplySubmit(comment.id)} disabled={submitting || !replyContent.trim()}>
+                <Button size="sm" onClick={() => handleReplySubmit(commentIdStr)} disabled={submitting || !replyContent.trim()}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setReplyingTo(null); setReplyContent(''); }}>

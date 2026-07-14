@@ -40,9 +40,11 @@ export interface RepliesResponse {
 }
 
 export interface CreateCommentPayload {
-    episodeId: string;
+    episodeId?: string;
     content: string;
     parentId?: string | null;
+    contentType?: string;
+    contentId?: string;
 }
 
 export interface CreateCommentResponse {
@@ -65,6 +67,24 @@ export const getCommentsByEpisode = async (
         return response.data;
     } catch (error: any) {
         console.error('Error fetching comments:', error);
+        throw error.response?.data || error;
+    }
+};
+
+// Get comments for a blog post
+export const getCommentsByBlog = async (
+    blogId: string,
+    page = 1,
+    limit = 20
+): Promise<CommentsResponse> => {
+    try {
+        const response = await commentsApi.get(
+            `/api/comments/blog/${blogId}`,
+            { params: { page, limit } }
+        );
+        return response.data;
+    } catch (error: any) {
+        console.error('Error fetching blog comments:', error);
         throw error.response?.data || error;
     }
 };

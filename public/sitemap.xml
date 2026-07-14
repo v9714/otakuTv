@@ -26,259 +26,192 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://otakutv.in/blogs</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://otakutv.in/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/anime/5</loc>
-    <lastmod>2026-01-10T18:42:09.770Z</lastmod>
+    <loc>https://otakutv.in/anime/115</loc>
+    <lastmod>2026-01-17T17:46:25.671Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/anime/4</loc>
-    <lastmod>2026-01-10T18:41:55.238Z</lastmod>
+    <loc>https://otakutv.in/anime/114</loc>
+    <lastmod>2026-01-17T17:45:08.814Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/anime/3</loc>
-    <lastmod>2026-01-10T18:40:33.976Z</lastmod>
+    <loc>https://otakutv.in/anime/113</loc>
+    <lastmod>2026-01-17T17:44:28.028Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/anime/2</loc>
-    <lastmod>2026-01-10T18:39:48.845Z</lastmod>
+    <loc>https://otakutv.in/anime/112</loc>
+    <lastmod>2026-01-17T17:43:56.090Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/anime/1</loc>
-    <lastmod>2026-01-10T18:37:32.143Z</lastmod>
+    <loc>https://otakutv.in/anime/111</loc>
+    <lastmod>2026-01-17T17:43:50.232Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/37</loc>
-    <lastmod>2026-01-11T14:21:45.430Z</lastmod>
+    <loc>https://otakutv.in/anime/110</loc>
+    <lastmod>2026-01-08T11:07:12.527Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/36</loc>
-    <lastmod>2026-01-11T13:29:08.291Z</lastmod>
+    <loc>https://otakutv.in/anime/109</loc>
+    <lastmod>2026-01-08T10:52:52.872Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/35</loc>
-    <lastmod>2026-01-11T12:53:24.457Z</lastmod>
+    <loc>https://otakutv.in/anime/108</loc>
+    <lastmod>2026-01-08T10:45:41.855Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/34</loc>
-    <lastmod>2026-01-11T12:51:20.518Z</lastmod>
+    <loc>https://otakutv.in/anime/107</loc>
+    <lastmod>2026-01-08T10:45:18.579Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/33</loc>
-    <lastmod>2026-01-11T12:01:16.370Z</lastmod>
+    <loc>https://otakutv.in/anime/106</loc>
+    <lastmod>2026-01-08T10:44:35.426Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/32</loc>
-    <lastmod>2026-01-11T11:22:12.803Z</lastmod>
+    <loc>https://otakutv.in/anime/105</loc>
+    <lastmod>2026-01-08T10:43:56.846Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/31</loc>
-    <lastmod>2026-01-11T09:49:21.884Z</lastmod>
+    <loc>https://otakutv.in/anime/104</loc>
+    <lastmod>2026-01-08T10:43:31.795Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/30</loc>
-    <lastmod>2026-01-11T09:46:25.479Z</lastmod>
+    <loc>https://otakutv.in/anime/103</loc>
+    <lastmod>2026-01-08T10:41:12.492Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/29</loc>
-    <lastmod>2026-01-11T09:45:45.359Z</lastmod>
+    <loc>https://otakutv.in/anime/102</loc>
+    <lastmod>2026-01-08T10:40:03.040Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/28</loc>
-    <lastmod>2026-01-11T08:52:09.095Z</lastmod>
+    <loc>https://otakutv.in/anime/101</loc>
+    <lastmod>2026-01-08T10:39:20.830Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/27</loc>
-    <lastmod>2026-01-11T08:46:22.353Z</lastmod>
+    <loc>https://otakutv.in/manga/84</loc>
+    <lastmod>2026-01-17T17:43:43.715Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/26</loc>
-    <lastmod>2026-01-11T07:49:31.563Z</lastmod>
+    <loc>https://otakutv.in/manga/83</loc>
+    <lastmod>2026-01-17T17:43:38.874Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/25</loc>
-    <lastmod>2026-01-11T07:11:20.069Z</lastmod>
+    <loc>https://otakutv.in/manga/82</loc>
+    <lastmod>2026-01-17T17:43:18.714Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/24</loc>
-    <lastmod>2026-01-11T06:36:10.659Z</lastmod>
+    <loc>https://otakutv.in/manga/81</loc>
+    <lastmod>2026-01-17T17:43:08.670Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/23</loc>
-    <lastmod>2026-01-11T06:02:23.077Z</lastmod>
+    <loc>https://otakutv.in/manga/80</loc>
+    <lastmod>2026-01-17T17:42:58.496Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/22</loc>
-    <lastmod>2026-01-11T04:27:38.757Z</lastmod>
+    <loc>https://otakutv.in/manga/79</loc>
+    <lastmod>2026-01-07T09:13:22.203Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/21</loc>
-    <lastmod>2026-01-11T04:23:13.200Z</lastmod>
+    <loc>https://otakutv.in/manga/78</loc>
+    <lastmod>2026-01-07T09:12:56.088Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/20</loc>
-    <lastmod>2026-01-11T04:04:57.219Z</lastmod>
+    <loc>https://otakutv.in/manga/77</loc>
+    <lastmod>2026-01-07T09:10:21.383Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/19</loc>
-    <lastmod>2026-01-11T03:56:12.588Z</lastmod>
+    <loc>https://otakutv.in/manga/76</loc>
+    <lastmod>2026-01-07T09:07:35.819Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/18</loc>
-    <lastmod>2026-01-11T03:39:00.148Z</lastmod>
+    <loc>https://otakutv.in/blogs/understanding-the-genius-of-studio-ghiblis-background-art</loc>
+    <lastmod>2026-07-14T17:52:58.341Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/17</loc>
-    <lastmod>2026-01-11T02:55:36.679Z</lastmod>
+    <loc>https://otakutv.in/blogs/the-ultimate-guide-to-berserk-where-to-start-reading-the-manga</loc>
+    <lastmod>2026-07-14T17:52:58.326Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/16</loc>
-    <lastmod>2026-01-11T02:03:30.862Z</lastmod>
+    <loc>https://otakutv.in/blogs/10-must-watch-slice-of-life-anime-for-stress-relief</loc>
+    <lastmod>2026-07-14T17:52:58.308Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/15</loc>
-    <lastmod>2026-01-11T02:00:32.813Z</lastmod>
+    <loc>https://otakutv.in/blogs/chainsaw-man-part-2-what-to-expect-from-the-next-major-arc</loc>
+    <lastmod>2026-07-14T17:52:58.296Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/14</loc>
-    <lastmod>2026-01-11T01:44:58.846Z</lastmod>
+    <loc>https://otakutv.in/blogs/the-rise-of-solo-leveling-why-webtoon-adaptations-are-dominating-anime</loc>
+    <lastmod>2026-07-14T17:52:58.261Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://otakutv.in/manga/13</loc>
-    <lastmod>2026-01-11T01:24:50.912Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/12</loc>
-    <lastmod>2026-01-11T00:33:40.325Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/11</loc>
-    <lastmod>2026-01-11T00:29:00.498Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/10</loc>
-    <lastmod>2026-01-10T22:02:12.823Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/9</loc>
-    <lastmod>2026-01-10T21:49:14.049Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/8</loc>
-    <lastmod>2026-01-10T21:06:49.719Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/7</loc>
-    <lastmod>2026-01-10T20:50:36.841Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/6</loc>
-    <lastmod>2026-01-10T20:48:29.244Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/5</loc>
-    <lastmod>2026-01-10T20:17:03.679Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/4</loc>
-    <lastmod>2026-01-10T20:14:51.074Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/3</loc>
-    <lastmod>2026-01-10T20:12:55.400Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/2</loc>
-    <lastmod>2026-01-10T19:37:17.155Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://otakutv.in/manga/1</loc>
-    <lastmod>2026-01-10T18:55:38.555Z</lastmod>
+    <loc>https://otakutv.in/blogs/test</loc>
+    <lastmod>2026-07-14T13:44:01.641Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

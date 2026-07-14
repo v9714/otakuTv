@@ -1,4 +1,4 @@
-import { contentApi } from "./backendApi";
+import { contentApi, interactionApi } from "./backendApi";
 import { CONTENT_API_URL } from "@/utils/constants";
 
 export interface BlogPost {
@@ -10,6 +10,7 @@ export interface BlogPost {
   coverImage: string | null;
   views: number;
   status: 'DRAFT' | 'PUBLISHED';
+  isCommentOn?: boolean;
   createdAt: string;
   author: {
     id: number;
@@ -19,6 +20,7 @@ export interface BlogPost {
   genres: Array<{ id: number; name: string }>;
   animeId?: number | null;
   mangaId?: number | null;
+  likesCount?: number;
 }
 
 export interface BlogListResponse {
@@ -52,6 +54,12 @@ export const getBlogGenres = async (): Promise<Array<{ id: number; name: string 
 // Get single blog post by slug
 export const getBlogBySlug = async (slug: string): Promise<BlogPost> => {
   const response = await contentApi.get(`/api/blogs/${slug}`);
+  return response.data.data;
+};
+
+// Admin: Get single blog post by ID (including drafts)
+export const getAdminBlogById = async (id: number): Promise<BlogPost> => {
+  const response = await contentApi.get(`/api/admin/blogs/${id}`);
   return response.data.data;
 };
 
@@ -94,4 +102,30 @@ export const resolveImageUrl = (path: string | null): string => {
   if (!path) return "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=60";
   if (path.startsWith("http")) return path;
   return `${CONTENT_API_URL}${path}`;
+};
+
+// Blog Interactions
+export const toggleBlogLike = async (blogId: number): Promise<any> => {
+  const response = await interactionApi.post("/api/interactions/blog/like", { blogId });
+  return response.data;
+};
+
+export const getBlogLikeStatus = async (blogId: number): Promise<any> => {
+  const response = await interactionApi.get(`/api/interactions/blog/${blogId}/like-status`);
+  return response.data;
+};
+
+export const toggleBlogBookmark = async (blogId: number): Promise<any> => {
+  const response = await interactionApi.post("/api/interactions/blog/bookmark", { blogId });
+  return response.data;
+};
+
+export const getBlogBookmarkStatus = async (blogId: number): Promise<any> => {
+  const response = await interactionApi.get(`/api/interactions/blog/${blogId}/bookmark-status`);
+  return response.data;
+};
+
+export const incrementBlogViews = async (slug: string): Promise<any> => {
+  const response = await contentApi.post(`/api/blogs/${slug}/view`);
+  return response.data;
 };

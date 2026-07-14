@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => ({
       port: 8080,
     },
     headers: {
-      'Cache-Control': 'max-age=31536000',
       'X-Content-Type-Options': 'nosniff',
     },
   },
@@ -28,6 +27,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Dedupe React to prevent multiple copies — fixes useContext null errors
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },
   build: {
     minify: mode === 'production' ? "esbuild" : false,
@@ -50,13 +51,17 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
       'react-router-dom',
       '@tanstack/react-query',
       'lucide-react',
       'clsx',
       'tailwind-merge'
     ],
-    force: false,
+    // Force re-bundle on start to clear stale cached chunks
+    force: true,
   },
   define: {
     global: 'globalThis',
