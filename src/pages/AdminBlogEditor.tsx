@@ -583,6 +583,9 @@ const AdminBlogEditor = () => {
   const [inputImageUrl, setInputImageUrl] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [wordCount, setWordCount] = useState(0);
+  const [showDraftWarningModal, setShowDraftWarningModal] = useState(false);
+  const [hasDraftEdits, setHasDraftEdits] = useState(false);
+
   const getActiveColumnWidths = (): string[] => {
     if (!editor) return [];
     const { state } = editor;
@@ -788,6 +791,7 @@ const AdminBlogEditor = () => {
           setSelectedGenres(blog.genres.map((g) => g.id));
           setRelatedAnimeId(blog.animeId || null);
           setRelatedMangaId(blog.mangaId || null);
+          setHasDraftEdits(blog.hasDraftEdits || false);
           if (blog.coverImage) {
             const fit = getFitFromUrl(blog.coverImage);
             setCoverImageFit(fit);
@@ -1007,6 +1011,14 @@ const AdminBlogEditor = () => {
     }
   };
 
+  const triggerSaveDraft = () => {
+    if (isEditMode && status === "PUBLISHED") {
+      setShowDraftWarningModal(true);
+    } else {
+      handleSave("DRAFT");
+    }
+  };
+
   const toggleGenre = (genreId: number) => {
     setSelectedGenres((prev) =>
       prev.includes(genreId) ? prev.filter((id) => id !== genreId) : [...prev, genreId]
@@ -1079,12 +1091,17 @@ const AdminBlogEditor = () => {
                 <h1 className="text-3xl font-bold text-foreground">
                   {isEditMode ? "✏️ Edit Article" : "📝 New Article"}
                 </h1>
+                {hasDraftEdits && (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-medium px-2.5 py-0.5 rounded-full text-xs">
+                    Staged Draft Revision
+                  </Badge>
+                )}
               </div>
 
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  onClick={() => handleSave("DRAFT")}
+                  onClick={triggerSaveDraft}
                   disabled={isSaving}
                   className="flex-1 sm:flex-none hover:bg-accent hover:text-accent-foreground"
                 >
@@ -1931,6 +1948,48 @@ const AdminBlogEditor = () => {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDraftWarningModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Overlay */}
+            <div 
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+              onClick={() => setShowDraftWarningModal(false)}
+            />
+            {/* Modal Box */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 text-amber-500 mb-4">
+                <span className="p-2 bg-amber-500/10 rounded-lg text-xl">⚠️</span>
+                <h3 className="text-xl font-bold text-slate-100 font-sans">Warning: Staging Revision</h3>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed mb-6 font-sans">
+                This article is currently <span className="text-emerald-400 font-semibold">PUBLISHED</span> and live on the site.
+                <br /><br />
+                Saving it as a draft will create a pending revision, but the live version will remain visible to users until you publish the changes.
+                <br /><br />
+                Please read your draft edits carefully before proceeding. Do you want to save this revision draft?
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDraftWarningModal(false)}
+                  className="bg-transparent border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    setShowDraftWarningModal(false);
+                    await handleSave("DRAFT");
+                  }}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-medium shadow-lg"
+                >
+                  Save Staging Draft
+                </Button>
               </div>
             </div>
           </div>

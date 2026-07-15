@@ -21,6 +21,7 @@ export interface BlogPost {
   animeId?: number | null;
   mangaId?: number | null;
   likesCount?: number;
+  hasDraftEdits?: boolean;
 }
 
 export interface BlogListResponse {
@@ -99,8 +100,8 @@ export const uploadInlineImage = async (file: File): Promise<string> => {
 
 // Resolve Cover Image URL
 export const resolveImageUrl = (path: string | null): string => {
-  if (!path) return "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=60";
-  if (path.startsWith("http")) return path;
+  if (!path) return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f0f13'/><text x='50%' y='50%' font-family='sans-serif' font-size='20' fill='%2327272a' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>";
+  if (path && path.startsWith("http")) return path;
   return `${CONTENT_API_URL}${path}`;
 };
 
@@ -135,5 +136,36 @@ export const getBlogBookmarkStatus = async (blogId: number): Promise<any> => {
 
 export const incrementBlogViews = async (slug: string): Promise<any> => {
   const response = await contentApi.post(`/api/blogs/${slug}/view`);
+  return response.data;
+};
+
+// Get suggested blog posts
+export const getSuggestedBlogs = async (slug: string): Promise<BlogPost[]> => {
+  const response = await contentApi.get(`/api/blogs/${slug}/suggested`);
+  return response.data.data;
+};
+
+// Download Excel template for bulk upload
+export const downloadBulkBlogTemplate = async (): Promise<void> => {
+  const response = await contentApi.get("/api/admin/blogs/bulk/template", {
+    responseType: "blob"
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "blog_bulk_template.xlsx");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// Upload Excel file for bulk blog import
+export const uploadBulkBlogsFile = async (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await contentApi.post("/api/admin/blogs/bulk/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
   return response.data;
 };

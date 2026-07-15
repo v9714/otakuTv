@@ -20,10 +20,12 @@ import {
   Bookmark,
   Copy,
   FileText,
-  Send
+  Send,
+  Image
 } from "lucide-react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { toast } from "sonner";
 
 // Modals & Auth
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +46,8 @@ import {
   toggleBlogBookmark, 
   getBlogBookmarkStatus,
   incrementBlogViews,
-  getFitFromUrl
+  getFitFromUrl,
+  getSuggestedBlogs
 } from "@/services/blogService";
 import { getAnimeById } from "@/services/api";
 import { mangaService } from "@/services/mangaService";
@@ -56,6 +59,8 @@ export default function BlogDetails() {
   
   const [blog, setBlog] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
+  const [suggestedBlogs, setSuggestedBlogs] = useState<BlogPost[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(true);
 
   // Interaction State
   const [liked, setLiked] = useState(false);
@@ -157,6 +162,23 @@ export default function BlogDetails() {
     };
     loadBlog();
   }, [slug, navigate]);
+
+  // Fetch suggested blogs
+  useEffect(() => {
+    const loadSuggested = async () => {
+      if (!slug) return;
+      try {
+        setSuggestedLoading(true);
+        const data = await getSuggestedBlogs(slug);
+        setSuggestedBlogs(data || []);
+      } catch (error) {
+        console.error("Error loading suggested blogs:", error);
+      } finally {
+        setSuggestedLoading(false);
+      }
+    };
+    loadSuggested();
+  }, [slug]);
 
   // Fetch like & bookmark status when currentUser or blog changes
   useEffect(() => {
@@ -292,17 +314,140 @@ export default function BlogDetails() {
       year: "numeric"
     });
     
-    const formatted = `Title: ${blog.title}
-Summary: ${blog.summary}
-Author: ${blog.author?.displayName || "Admin"}
-Date: ${dateStr}
-URL: ${window.location.href}
+    const formatted = `=========================================
+📖 ARTICLE: ${blog.title}
+=========================================
+✍️ Author: ${blog.author?.displayName || "Admin"}
+📅 Published: ${dateStr}
+⏱️ Reading Time: ${getReadingTime(blog.content)}
+🔗 Article URL: ${window.location.href}
 
-Content:
-${getReadableContent(blog.content || "")}`;
+📝 SUMMARY:
+"${blog.summary}"
+
+-----------------------------------------
+CONTENT:
+${getReadableContent(blog.content || "")}
+-----------------------------------------
+✨ Shared via OtakuTV`;
 
     navigator.clipboard.writeText(formatted);
     toast.success("Formatted blog copied to clipboard!");
+  };
+
+  const getAbsoluteImageUrl = (path: string) => {
+    const resolved = resolveImageUrl(path);
+    if (resolved.startsWith("http://") || resolved.startsWith("https://")) {
+      return resolved;
+    }
+    const origin = window.location.origin;
+    return `${origin}${resolved.startsWith("/") ? "" : "/"}${resolved}`;
+  };
+
+  const fetchImageAsPngBlob = async (url: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Canvas conversion to blob failed"));
+          }
+        }, "image/png");
+      };
+      img.onerror = () => {
+        reject(new Error("Failed to load image resource"));
+      };
+      img.src = url;
+    });
+  };
+
+  const handleCopyWithCover = async () => {
+    if (!blog) return;
+    const absoluteImgUrl = getAbsoluteImageUrl(blog.coverImage);
+    const dateStr = new Date(blog.createdAt).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric"
+    });
+    
+    const plainText = `📖 ARTICLE: ${blog.title}
+✍️ Author: ${blog.author?.displayName || "Admin"}
+📅 Published: ${dateStr}
+🔗 URL: ${window.location.href}
+
+📝 SUMMARY:
+"${blog.summary}"
+
+${getReadableContent(blog.content || "")}`;
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; color: #111; max-width: 650px; line-height: 1.6; padding: 16px; border: 1px solid #eaeaea; border-radius: 12px; background: #fff;">
+        <img src="${absoluteImgUrl}" alt="${blog.title}" style="width: 100%; border-radius: 8px; margin-bottom: 16px; aspect-ratio: 16/9; object-fit: cover;" />
+        <h1 style="color: #6d28d9; margin-bottom: 8px; font-size: 24px;">${blog.title}</h1>
+        <p style="color: #666; font-size: 13px; margin-bottom: 16px;">
+          <strong>Author:</strong> ${blog.author?.displayName || "Admin"} | 
+          <strong>Published:</strong> ${dateStr} | 
+          <strong>Link:</strong> <a href="${window.location.href}">${window.location.href}</a>
+        </p>
+        <blockquote style="border-left: 4px solid #6d28d9; padding-left: 12px; color: #444; font-style: italic; margin-bottom: 20px; font-size: 14px; background: #f9f9f9; padding: 10px 12px; border-radius: 0 8px 8px 0;">
+          "${blog.summary}"
+        </blockquote>
+        <div style="font-size: 14px; color: #333;">
+          ${blog.content || ""}
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 24px;" />
+        <p style="font-size: 11px; color: #999; text-align: center; margin-bottom: 0;">Shared via OtakuTV</p>
+      </div>
+    `;
+    
+    toast.loading("Processing cover image...");
+    
+    try {
+      const imageBlob = await fetchImageAsPngBlob(absoluteImgUrl);
+      const textBlob = new Blob([plainText], { type: "text/plain" });
+      const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+      
+      const clipboardItem = new ClipboardItem({
+        "image/png": imageBlob,
+        "text/plain": textBlob,
+        "text/html": htmlBlob
+      });
+      
+      toast.dismiss();
+      await navigator.clipboard.write([clipboardItem]);
+      toast.success("Article text and Cover Image copied successfully!");
+    } catch (err) {
+      console.warn("Failed to copy binary image blob directly, copying HTML template fallback:", err);
+      try {
+        const textBlob = new Blob([plainText], { type: "text/plain" });
+        const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+        
+        const clipboardItem = new ClipboardItem({
+          "text/plain": textBlob,
+          "text/html": htmlBlob
+        });
+        
+        toast.dismiss();
+        await navigator.clipboard.write([clipboardItem]);
+        toast.success("Copied article with cover URL (Image copy restricted by browser settings)");
+      } catch (fallbackErr) {
+        toast.dismiss();
+        navigator.clipboard.writeText(plainText);
+        toast.success("Copied article content (plain text)");
+      }
+    }
   };
 
   const handleNativeShare = async () => {
@@ -626,6 +771,68 @@ ${getReadableContent(blog.content || "")}`;
                 </Card>
               )}
 
+              {/* Suggested Blogs Section */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Suggested Reads
+                  </h3>
+                </div>
+                
+                {suggestedLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="flex gap-3 animate-pulse">
+                        <div className="w-20 h-14 bg-muted rounded-lg" />
+                        <div className="flex-1 space-y-2 py-1">
+                          <div className="h-3 bg-muted rounded w-3/4" />
+                          <div className="h-2 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : suggestedBlogs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No suggested blogs found.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {suggestedBlogs.map((item) => (
+                      <Link 
+                        key={item.id} 
+                        to={`/blogs/${item.slug}`}
+                        className="group flex gap-3 p-2 rounded-xl hover:bg-primary/5 transition-colors border border-transparent hover:border-white/5"
+                      >
+                        <div className="w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
+                          <img
+                            src={resolveImageUrl(item.coverImage)}
+                            alt={item.title}
+                            className={`w-full h-full object-${getFitFromUrl(item.coverImage) || "cover"} group-hover:scale-[1.05] transition-transform duration-300`}
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
+                          <h4 className="font-semibold text-xs text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                            {item.title}
+                          </h4>
+                          <div className="flex items-center gap-2 text-[9px] text-muted-foreground mt-1">
+                            <span className="flex items-center gap-0.5">
+                              <Eye className="h-2.5 w-2.5" />
+                              {item.views} views
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {new Date(item.createdAt).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric"
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
 
           </div>
@@ -717,6 +924,11 @@ ${getReadableContent(blog.content || "")}`;
             <Button onClick={handleCopyFormatted} variant="outline" className="w-full flex items-center justify-start gap-3 hover:bg-primary/5 hover:text-primary transition-all">
               <FileText className="h-4 w-4" />
               <span>Copy Formatted Article Text</span>
+            </Button>
+
+            <Button onClick={handleCopyWithCover} variant="outline" className="w-full flex items-center justify-start gap-3 hover:bg-primary/5 hover:text-primary transition-all">
+              <Image className="h-4 w-4" />
+              <span>Copy with Cover Image</span>
             </Button>
           </div>
         </DialogContent>

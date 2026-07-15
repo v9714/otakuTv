@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { AdminRoute } from "@/components/layout/AdminRoute";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Search, Edit, Trash2, Eye, FileText, CheckCircle2, Filter } from "lucide-react";
+import { 
+  PlusCircle, Search, Edit, Trash2, Eye, FileText, CheckCircle2, Filter,
+  UploadCloud, FileSpreadsheet, AlertTriangle, Loader2, RefreshCw
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,7 +20,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getAdminBlogs, deleteBlog, BlogPost, resolveImageUrl, getFitFromUrl } from "@/services/blogService";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { 
+  getAdminBlogs, 
+  deleteBlog, 
+  BlogPost, 
+  resolveImageUrl, 
+  getFitFromUrl,
+  downloadBulkBlogTemplate,
+  uploadBulkBlogsFile
+} from "@/services/blogService";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { BlogPagination } from "@/components/admin/BlogPagination";
@@ -33,6 +52,16 @@ const AdminBlogs = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [deleteBlogId, setDeleteBlogId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Bulk Upload State
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [uploadingBulk, setUploadingBulk] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [bulkErrorsCount, setBulkErrorsCount] = useState<number | null>(null);
+  const [errorFileBase64, setErrorFileBase64] = useState<string | null>(null);
+  const [bulkErrorSummary, setBulkErrorSummary] = useState<string | null>(null);
 
   const itemsPerPage = 5;
 
@@ -141,7 +170,7 @@ const AdminBlogs = () => {
       }
     };
     fetchApiData();
-  }, [currentPage, searchQuery, statusFilter]);
+  }, [currentPage, searchQuery, statusFilter, refreshTrigger]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -157,6 +186,102 @@ const AdminBlogs = () => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      setTemplateLoading(true);
+      await downloadBulkBlogTemplate();
+      toast.success("Sample template downloaded successfully!");
+    } catch (err) {
+      console.error("Failed to download template", err);
+      toast.error("Failed to download bulk upload template");
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (!file.name.endsWith(".xlsx")) {
+        toast.error("Please upload a valid Excel file (.xlsx)");
+        return;
+      }
+      setSelectedFile(file);
+      // Reset error log states
+      setBulkErrorsCount(null);
+      setErrorFileBase64(null);
+      setBulkErrorSummary(null);
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Please select an Excel file first");
+      return;
+    }
+
+    try {
+      setUploadingBulk(true);
+      const res = await uploadBulkBlogsFile(selectedFile);
+      toast.success(res.message || "Successfully imported blogs!");
+      setBulkOpen(false);
+      setSelectedFile(null);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err: any) {
+      if (err.response && err.response.status === 422) {
+        const errorData = err.response.data?.data;
+        if (errorData) {
+          setBulkErrorsCount(errorData.errorsCount || 0);
+          setErrorFileBase64(errorData.errorFileBase64 || null);
+          setBulkErrorSummary(errorData.summary || "Validation failed.");
+          toast.error("Validation failed. Check the error log for details.");
+        } else {
+          toast.error(err.response.data?.message || "Failed to process bulk upload file");
+        }
+      } else {
+        console.error("Bulk upload error", err);
+        toast.error(err.response?.data?.message || "An unexpected error occurred during bulk upload");
+      }
+    } finally {
+      setUploadingBulk(false);
+    }
+  };
+
+  const handleDownloadErrors = () => {
+    if (!errorFileBase64) {
+      toast.error("Error file data is not available");
+      return;
+    }
+    try {
+      const base64Clean = errorFileBase64.replace(/\s/g, ''); // strip any whitespace
+      const byteCharacters = window.atob(base64Clean);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "bulk_upload_errors.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      
+      // Allow browser download pipeline to capture click event before cleanup
+      setTimeout(() => {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast.success("Error log spreadsheet downloaded successfully! Please correct the failures indicated inside and re-upload.");
+    } catch (e: any) {
+      console.error("Failed to download error log file", e);
+      toast.error("Failed to generate error log file download: " + e.message);
+    }
+  };
+
   return (
     <AdminRoute>
       <AdminLayout>
@@ -166,10 +291,21 @@ const AdminBlogs = () => {
               Blog Management
             </h1>
 
-            <Button onClick={() => navigate("/admin/blogs/new")} className="bg-primary hover:bg-primary/90">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Write New Blog
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => setBulkOpen(true)} 
+                variant="outline" 
+                className="border-anime-primary/20 hover:border-anime-primary/50 text-foreground transition-all"
+              >
+                <UploadCloud className="h-4 w-4 mr-2 text-anime-primary" />
+                Bulk Import
+              </Button>
+              
+              <Button onClick={() => navigate("/admin/blogs/new")} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Write New Blog
+              </Button>
+            </div>
           </div>
 
           {/* Filters & Search */}
@@ -282,11 +418,19 @@ const AdminBlogs = () => {
                         .map((blog) => (
                           <TableRow 
                             key={blog.id}
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            className={
+                              blog.status === "DRAFT"
+                                ? "cursor-default hover:bg-muted/20"
+                                : "cursor-pointer hover:bg-muted/50 transition-colors"
+                            }
                             onClick={(e) => {
                               // Prevent navigation if clicking action buttons/icons
                               const target = e.target as HTMLElement;
                               if (target.closest('button') || target.closest('a')) {
+                                return;
+                              }
+                              // Prevent public details navigation for draft posts
+                              if (blog.status === "DRAFT") {
                                 return;
                               }
                               window.open(`/blogs/${blog.slug}`, "_blank");
@@ -313,16 +457,26 @@ const AdminBlogs = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                className={
-                                  blog.status === "PUBLISHED"
-                                    ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"
-                                    : "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
-                                }
-                                variant="outline"
-                              >
-                                {blog.status}
-                              </Badge>
+                              <div className="flex flex-col gap-1 items-start">
+                                <Badge
+                                  className={
+                                    blog.status === "PUBLISHED"
+                                      ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"
+                                      : "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
+                                  }
+                                  variant="outline"
+                                >
+                                  {blog.status}
+                                </Badge>
+                                {blog.hasDraftEdits && (
+                                  <Badge
+                                    className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] py-0 px-1.5"
+                                    variant="outline"
+                                  >
+                                    STAGED DRAFT
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -396,6 +550,201 @@ const AdminBlogs = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Bulk Upload Dialog */}
+          <Dialog open={bulkOpen} onOpenChange={(open) => {
+            if (!uploadingBulk) {
+              setBulkOpen(open);
+              if (!open) {
+                // Clear state on close
+                setSelectedFile(null);
+                setBulkErrorsCount(null);
+                setErrorFileBase64(null);
+                setBulkErrorSummary(null);
+              }
+            }
+          }}>
+            <DialogContent className="sm:max-w-[550px] border border-border/50 bg-background/95 backdrop-blur-xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <UploadCloud className="h-5 w-5 text-anime-primary animate-bounce-subtle" />
+                  Bulk Import Blogs
+                </DialogTitle>
+                <DialogDescription>
+                  Upload multiple blog posts simultaneously using a structured Excel template.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 my-2">
+                {bulkErrorsCount === null ? (
+                  <>
+                    {/* Step 1: Download Template */}
+                    <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-anime-primary/10 text-anime-primary font-semibold text-sm">
+                          1
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-semibold">Download Excel Template</p>
+                          <p className="text-xs text-muted-foreground">
+                            Get the latest spreadsheet format with dynamic Status validations and database Genres dropdowns.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="secondary" 
+                        onClick={handleDownloadTemplate} 
+                        disabled={templateLoading}
+                        className="w-full text-xs font-semibold"
+                      >
+                        {templateLoading ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                            Generating Template...
+                          </>
+                        ) : (
+                          <>
+                            <FileSpreadsheet className="h-4 w-4 mr-2 text-green-500" />
+                            Download Template File
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Step 2: Upload Excel File */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-anime-primary/10 text-anime-primary font-semibold text-sm">
+                          2
+                        </div>
+                        <p className="text-sm font-semibold">Upload Filled Spreadsheet</p>
+                      </div>
+
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border/80 hover:border-anime-primary/50 rounded-lg cursor-pointer bg-muted/10 hover:bg-muted/20 transition-all">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                          <UploadCloud className="h-8 w-8 text-muted-foreground mb-2" />
+                          <p className="text-xs font-medium text-foreground">
+                            {selectedFile ? selectedFile.name : "Click to browse or drag & drop Excel file"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Only .xlsx spreadsheet formats are supported
+                          </p>
+                        </div>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept=".xlsx" 
+                          onChange={handleFileChange}
+                          disabled={uploadingBulk}
+                        />
+                      </label>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Error State View: Only show "Download Error Excel" and "Upload Corrected Excel" */}
+                    <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-semibold text-red-500">Import Failed ({bulkErrorsCount} errors)</p>
+                          <p className="text-xs text-muted-foreground leading-normal">
+                            {bulkErrorSummary} Database changes were completely rolled back. Download the error log to see row-specific fixes.
+                          </p>
+                        </div>
+                      </div>
+
+                      {errorFileBase64 && (
+                        <Button 
+                          type="button"
+                          onClick={handleDownloadErrors}
+                          className="w-full bg-red-500 hover:bg-red-600 text-white text-xs font-semibold shadow-lg shadow-red-500/10"
+                        >
+                          <FileSpreadsheet className="h-4 w-4 mr-2" />
+                          Download Error Log (Excel)
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <UploadCloud className="h-4 w-4 text-anime-primary" />
+                        Upload Corrected Excel File
+                      </p>
+                      
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border/80 hover:border-anime-primary/50 rounded-lg cursor-pointer bg-muted/10 hover:bg-muted/20 transition-all">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                          <UploadCloud className="h-8 w-8 text-muted-foreground mb-2" />
+                          <p className="text-xs font-medium text-foreground">
+                            {selectedFile ? selectedFile.name : "Click to browse or drag & drop corrected Excel file"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Upload the corrected .xlsx file here to retry import
+                          </p>
+                        </div>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept=".xlsx" 
+                          onChange={handleFileChange}
+                          disabled={uploadingBulk}
+                        />
+                      </label>
+                    </div>
+
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      onClick={() => {
+                        // Reset all errors to start over and show template download option
+                        setBulkErrorsCount(null);
+                        setErrorFileBase64(null);
+                        setBulkErrorSummary(null);
+                        setSelectedFile(null);
+                      }}
+                      className="w-full text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                      Reset / Download Clean Template
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 mt-2">
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  onClick={() => {
+                    setBulkOpen(false);
+                    setSelectedFile(null);
+                    setBulkErrorsCount(null);
+                    setErrorFileBase64(null);
+                    setBulkErrorSummary(null);
+                  }}
+                  disabled={uploadingBulk}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={handleBulkUpload} 
+                  disabled={!selectedFile || uploadingBulk}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]"
+                >
+                  {uploadingBulk ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    "Import Blogs"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </AdminLayout>
     </AdminRoute>
